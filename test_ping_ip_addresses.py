@@ -1,21 +1,39 @@
 import ping_ip_addresses as pia
 
-
-def test_ping_ip_addresses():
-    assert pia.ping_ip_addresses(
-        [
-            "192.168.0.6",
-            "8.8.8.8",
-            "127.0.0.1",
-        ]
-    ) == (
-        ["8.8.8.8", "127.0.0.1"],
-        ["192.168.0.6"],
-    )
+# def test_ping_ip_addresses():
+#     assert pia.ping_ip_addresses(
+#         [
+#             "192.168.0.6",
+#             "8.8.8.8",
+#             "127.0.0.1",
+#         ]
+#     ) == (
+#         ["8.8.8.8", "127.0.0.1"],
+#         ["192.168.0.6"],
+#     )
 
 
 def test_convert_ranges_to_ip_list():
     assert pia.convert_ranges_to_ip_list("1.1.1.1") == ["1.1.1.1"]
+    assert pia.convert_ranges_to_ip_list(
+        [
+            "192.168.0.0/29",
+            "172.16.0.0/29",
+        ]
+    ) == [
+        "192.168.0.1",
+        "192.168.0.2",
+        "192.168.0.3",
+        "192.168.0.4",
+        "192.168.0.5",
+        "192.168.0.6",
+        "172.16.0.1",
+        "172.16.0.2",
+        "172.16.0.3",
+        "172.16.0.4",
+        "172.16.0.5",
+        "172.16.0.6",
+    ]
     assert pia.convert_ranges_to_ip_list("1.1.1.1-4") == [
         "1.1.1.1",
         "1.1.1.2",

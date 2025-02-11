@@ -60,15 +60,35 @@ def convert_ranges_to_ip_list(ip: str | list) -> list:
         exit()
 
     ip_range_list = []
-    match isinstance(ip, str):
-        case True:
-            splitted_ip = ip.split("-")
-            append_list(splitted_ip, ip_range_list)
 
-        case False:
-            for list_arg in ip:
-                splitted_ip = list_arg.split("-")
+    try:
+        for sub in ip:
+            subnet = ipaddress.ip_network(sub)
+
+            if subnet.prefixlen == 31 or subnet.prefixlen == 32:
+                raise ValueError
+
+            for ips in subnet.hosts():
+                ip_range_list.append(
+                    str(
+                        ipaddress.IPv4Address(
+                            getattr(
+                                ips,
+                                "_ip",
+                            )
+                        )
+                    )
+                )
+
+    except ValueError:
+        match isinstance(ip, str):
+            case True:
+                splitted_ip = ip.split("-")
                 append_list(splitted_ip, ip_range_list)
+            case False:
+                for list_arg in ip:
+                    splitted_ip = list_arg.split("-")
+                    append_list(splitted_ip, ip_range_list)
 
     return ip_range_list
 
@@ -84,6 +104,7 @@ def append_list(splitted_ip: list[str], ip_range_list: list) -> None:
             arg2 = ipaddress.ip_address(splitted_ip[1])
             for i in range(int(arg1), int(arg2) + 1, 1):
                 ip_range_list.append(str(ipaddress.IPv4Address(i)))
+
         except ValueError:
             arg2 = splitted_ip[1]
             for i in range(int(arg1), int(arg1) + int(arg2), 1):
