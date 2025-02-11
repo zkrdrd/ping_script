@@ -1,16 +1,17 @@
 import ping_ip_addresses as pia
 
-# def test_ping_ip_addresses():
-#     assert pia.ping_ip_addresses(
-#         [
-#             "192.168.0.6",
-#             "8.8.8.8",
-#             "127.0.0.1",
-#         ]
-#     ) == (
-#         ["8.8.8.8", "127.0.0.1"],
-#         ["192.168.0.6"],
-#     )
+
+def test_ping_ip_addresses():
+    assert pia.ping_ip_addresses(
+        [
+            "192.168.0.6",
+            "8.8.8.8",
+            "127.0.0.1",
+        ]
+    ) == (
+        ["8.8.8.8", "127.0.0.1"],
+        ["192.168.0.6"],
+    )
 
 
 def test_convert_ranges_to_ip_list():
