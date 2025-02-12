@@ -2,11 +2,11 @@
 Модуль, проверки доступности узлов при помощи команды ping.
 """
 
-import ipaddress
-import platform
-import re
-import subprocess
-import sys
+from ipaddress import IPv4Address, ip_address, ip_network
+from platform import system
+from re import search
+from subprocess import PIPE, run
+from sys import argv
 
 from tabulate import tabulate
 
@@ -23,18 +23,18 @@ def ping_ip_addresses(ip_addresses: list) -> list | list:
     passive_ip_list = []
 
     for ip in ip_addresses:
-        match platform.system():
+        match system():
             case "Windows":
-                reply = subprocess.run(
-                    [f"ping {ip}"],
-                    stdout=subprocess.PIPE,
+                reply = run(
+                    ["ping", {ip}],
+                    stdout=PIPE,
                     check=False,
                 )
 
             case "Linux":
-                reply = subprocess.run(
-                    [f"ping {ip} -c 4"],
-                    stdout=subprocess.PIPE,
+                reply = run(
+                    [f"ping -c 4 {ip}"],
+                    stdout=PIPE,
                     shell=True,
                     check=False,
                 )
@@ -43,7 +43,7 @@ def ping_ip_addresses(ip_addresses: list) -> list | list:
                 print("Unexpected system")
                 exit()
 
-        if re.search(r"(\s|\()(\d|\d\d)%", str(reply)):
+        if search(r"\s(TTL|ttl)", str(reply)):
             active_ip_list.append(ip)
         else:
             passive_ip_list.append(ip)
@@ -63,22 +63,13 @@ def convert_ranges_to_ip_list(ip: str | list) -> list:
 
     try:
         for sub in ip:
-            subnet = ipaddress.ip_network(sub)
+            subnet = ip_network(sub)
 
             if subnet.prefixlen == 31 or subnet.prefixlen == 32:
                 raise ValueError
 
             for ips in subnet.hosts():
-                ip_range_list.append(
-                    str(
-                        ipaddress.IPv4Address(
-                            getattr(
-                                ips,
-                                "_ip",
-                            )
-                        )
-                    )
-                )
+                ip_range_list.append(str(IPv4Address(getattr(ips, "_ip"))))
 
     except ValueError:
         match isinstance(ip, str):
@@ -96,19 +87,19 @@ def convert_ranges_to_ip_list(ip: str | list) -> list:
 def append_list(splitted_ip: list[str], ip_range_list: list) -> None:
     """Добавление IP в список"""
 
-    arg1 = ipaddress.ip_address(splitted_ip[0])
+    arg1 = ip_address(splitted_ip[0])
     if len(splitted_ip) == 1:
         ip_range_list.append(str(arg1))
     else:
         try:
-            arg2 = ipaddress.ip_address(splitted_ip[1])
+            arg2 = ip_address(splitted_ip[1])
             for i in range(int(arg1), int(arg2) + 1, 1):
-                ip_range_list.append(str(ipaddress.IPv4Address(i)))
+                ip_range_list.append(str(IPv4Address(i)))
 
         except ValueError:
             arg2 = splitted_ip[1]
             for i in range(int(arg1), int(arg1) + int(arg2), 1):
-                ip_range_list.append(str(ipaddress.IPv4Address(i)))
+                ip_range_list.append(str(IPv4Address(i)))
 
 
 def print_ip_table(active_ip_list: list, passive_ip_list: list) -> None:
@@ -119,6 +110,6 @@ def print_ip_table(active_ip_list: list, passive_ip_list: list) -> None:
 
 
 if __name__ == "__main__":
-    ranges = convert_ranges_to_ip_list(sys.argv[1::])
+    ranges = convert_ranges_to_ip_list(argv[1::])
     reachable, unreachable = ping_ip_addresses(ranges)
     print_ip_table(reachable, unreachable)
