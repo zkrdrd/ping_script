@@ -16,8 +16,7 @@ def ping_ip_addresses(ip_addresses: list) -> list | list:
     Функция ожидает как аргумент список IP-адресов"""
 
     if ip_addresses is None:
-        print("List is empty")
-        exit()
+        exit("List is empty")
 
     active_ip_list = []
     passive_ip_list = []
@@ -40,8 +39,7 @@ def ping_ip_addresses(ip_addresses: list) -> list | list:
                 )
 
             case _:
-                print("Unexpected system")
-                exit()
+                exit("Unexpected system")
 
         if search(r"\s(TTL|ttl)", str(reply)):
             active_ip_list.append(ip)
@@ -56,8 +54,7 @@ def convert_ranges_to_ip_list(ip: str | list) -> list:
     где каждый IP-адрес указан отдельно."""
 
     if ip is None or ip == "":
-        print("argument is empty")
-        exit()
+        exit("argument is empty")
 
     ip_range_list = []
 
