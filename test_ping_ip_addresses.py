@@ -1,8 +1,22 @@
-import ping_ip_addresses as pia
+"""
+Тестирование модуля ping_ip_address
+"""
+
+from ping_ip_addresses import convert_ranges_to_ip_list, ping_ip_addresses
 
 
 def test_ping_ip_addresses():
-    assert pia.ping_ip_addresses(
+    """Проверка функции пинга
+
+    Args:
+        ["192.168.0.6", "8.8.8.8", "127.0.0.1"]
+
+    Result:
+        ["8.8.8.8", "127.0.0.1"]
+        ["192.168.0.6"]
+    """
+
+    assert ping_ip_addresses(
         [
             "192.168.0.6",
             "8.8.8.8",
@@ -15,8 +29,33 @@ def test_ping_ip_addresses():
 
 
 def test_convert_ranges_to_ip_list():
-    assert pia.convert_ranges_to_ip_list("1.1.1.1") == ["1.1.1.1"]
-    assert pia.convert_ranges_to_ip_list(
+    """Проверка функции получения диапозона ip аресов
+
+    Args:
+
+        Принимается параметр в виде строки, например
+            1. '192.168.0.1'
+            2. '192.168.0.1-4'
+            3. '192.168.0.1-192.168.0.1-4'
+            4. '192.168.0.0/16'
+
+        или в виде списка
+            1. ['192.168.0.1', '192.168.0.1-4', '192.168.0.1-192.168.0.4']
+
+    Result:
+
+        Возвращается список диапозонов из заданых параметров, например
+            [
+                '192.168.0.1',
+                '192.168.0.2',
+                '192.168.0.3',
+                '192.168.0.4',
+            ]
+
+    """
+
+    assert convert_ranges_to_ip_list("1.1.1.1") == ["1.1.1.1"]
+    assert convert_ranges_to_ip_list(
         [
             "192.168.0.0/29",
             "172.16.0.0/29",
@@ -35,18 +74,18 @@ def test_convert_ranges_to_ip_list():
         "172.16.0.5",
         "172.16.0.6",
     ]
-    assert pia.convert_ranges_to_ip_list("1.1.1.1-4") == [
+    assert convert_ranges_to_ip_list("1.1.1.1-4") == [
         "1.1.1.1",
         "1.1.1.2",
         "1.1.1.3",
         "1.1.1.4",
     ]
-    assert pia.convert_ranges_to_ip_list("1.1.1.1-1.1.1.3") == [
+    assert convert_ranges_to_ip_list("1.1.1.1-1.1.1.3") == [
         "1.1.1.1",
         "1.1.1.2",
         "1.1.1.3",
     ]
-    assert pia.convert_ranges_to_ip_list(
+    assert convert_ranges_to_ip_list(
         [
             "8.8.8.8",
             "1.1.1.1-1.1.1.3",
