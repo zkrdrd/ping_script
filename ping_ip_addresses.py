@@ -2,6 +2,7 @@
 Модуль, проверки доступности узлов при помощи команды ping.
 """
 
+from argparse import ArgumentParser
 from ipaddress import IPv4Address, ip_address, ip_network
 from platform import system
 from re import search
@@ -11,14 +12,19 @@ from typing import List, Tuple, Union
 
 from tabulate import tabulate
 
+operation_system = system()
+
 
 def ping_ip_addresses(ip_addresses: List[str]) -> Tuple[List[str]]:
-    """Запуск команды пинг. Поск строки по регулярному выражению
-    Функция ожидает как аргумент список IP-адресов
+    """Running the ping command.
+
+    Searching for a string using a regular expression
+
+    The function expects a list of IP addresses as an argument.
 
     Args:
 
-        Принимается параметр в виде списка, например
+        The parameter is accepted as a list, for example
             [
                 '192.168.0.1',
                 '192.168.0.2',
@@ -28,15 +34,16 @@ def ping_ip_addresses(ip_addresses: List[str]) -> Tuple[List[str]]:
 
     Return:
 
-        Возвращается два списока, доступные и недоступные адреса, например
+        Two lists are returned, available and unavailable addresses,
+        for example
 
-            1. Список доступных адресов
+            1. List of available addresses
                 [
                     '192.168.0.1',
                     '192.168.0.2',
                 ]
 
-            2. Список недоступых адресов
+            2. The list of unavailable addresses
                 [
                     '192.168.0.3',
                     '192.168.0.4',
@@ -50,17 +57,18 @@ def ping_ip_addresses(ip_addresses: List[str]) -> Tuple[List[str]]:
     passive_ip_list = []
 
     for ip in ip_addresses:
-        match system():
+        print(f"Check: {ip}")
+        match operation_system:
             case "Windows":
                 reply = run(
-                    ["ping", {ip}],
+                    ["ping", "-n", "1", ip],
                     stdout=PIPE,
                     check=False,
                 )
 
             case "Linux":
                 reply = run(
-                    [f"ping -c 4 {ip}"],
+                    [f"ping -c 1 {ip}"],
                     stdout=PIPE,
                     shell=True,
                     check=False,
@@ -78,23 +86,23 @@ def ping_ip_addresses(ip_addresses: List[str]) -> Tuple[List[str]]:
 
 
 def convert_ranges_to_ip_list(ip: Union[str, list]) -> List[str]:
-    """Конвертирует список IP-адресов в разных форматах в список,
-    где каждый IP-адрес указан отдельно.
+    """Converts a list of IP addresses in various formats to a list of,
+    where each IP address is specified separately.
 
     Args:
 
-        Принимается параметр в виде строки, например
+        The parameter is accepted as a string, for example
             1. '192.168.0.1'
             2. '192.168.0.1-4'
             3. '192.168.0.1-192.168.0.1-4'
             4. '192.168.0.0/16'
 
-        или в виде списка
+        or as a list
             1. ['192.168.0.1', '192.168.0.1-4', '192.168.0.1-192.168.0.4']
 
     Return:
 
-        Возвращается список диапозонов из заданых параметров, например
+        A list of ranges from the specified parameters is returned, for example
             [
                 '192.168.0.1',
                 '192.168.0.2',
@@ -122,65 +130,41 @@ def convert_ranges_to_ip_list(ip: Union[str, list]) -> List[str]:
                 ip_range_list.append(str(IPv4Address(getattr(ips, "_ip"))))
 
     except ValueError:
-        if isinstance(ip, str):
-            splitted_ip = ip.split("-")
-            append_list(splitted_ip, ip_range_list)
-        else:
-            for list_arg in ip:
-                splitted_ip = list_arg.split("-")
-                append_list(splitted_ip, ip_range_list)
+        for list_arg in ip:
+            splitted_ip = list_arg.split("-")
+            arg1 = ip_address(splitted_ip[0])
+            if len(splitted_ip) == 1:
+                ip_range_list.append(str(arg1))
+            else:
+                try:
+                    arg2 = ip_address(splitted_ip[1])
+                    for i in range(int(arg1), int(arg2) + 1, 1):
+                        ip_range_list.append(str(IPv4Address(i)))
+
+                except ValueError:
+                    arg2 = splitted_ip[1]
+                    for i in range(int(arg1), int(arg1) + int(arg2), 1):
+                        ip_range_list.append(str(IPv4Address(i)))
 
     return ip_range_list
-
-
-def append_list(
-    splitted_ip: List[str],
-    ip_range_list: List[str],
-) -> None:
-    """Добавление IP в список
-
-    Args:
-        1. Разделеный список аргументов
-        2. Список куда заполняеется диапозон ip адресов
-
-    Если второй аргумент в списке в формате ip адреса (1.1.1.1)
-    то высчитывается диапозон ip адресов в блоке try
-
-    Если второй аргумент в списке число в формате строки (4)
-    то высчитывается диапозон ip адресов в блоке except
-    """
-
-    arg1 = ip_address(splitted_ip[0])
-    if len(splitted_ip) == 1:
-        ip_range_list.append(str(arg1))
-    else:
-        try:
-            arg2 = ip_address(splitted_ip[1])
-            for i in range(int(arg1), int(arg2) + 1, 1):
-                ip_range_list.append(str(IPv4Address(i)))
-
-        except ValueError:
-            arg2 = splitted_ip[1]
-            for i in range(int(arg1), int(arg1) + int(arg2), 1):
-                ip_range_list.append(str(IPv4Address(i)))
 
 
 def print_ip_table(
     active_ip_list: List[str],
     passive_ip_list: List[str],
 ) -> None:
-    """Вывод информации в табличном формате
+    """Information output in tabular format
 
     Args:
-        Принимает два списока, доступные и недоступные адреса, например
+        Accepts two lists, available and unavailable addresses, for example
 
-            1. Список доступных адресов
+            1. List of available addresses
                 [
                     '192.168.0.1',
                     '192.168.0.2',
                 ]
 
-            2. Список недоступых адресов
+            2. The list of unavailable addresses
                 [
                     '192.168.0.3',
                     '192.168.0.4',
@@ -188,7 +172,7 @@ def print_ip_table(
 
     Print:
 
-        Выводит сообщение в консоль в табличном формате
+        Outputs a message to the console in tabular format
 
         Reachable    Unreachable
         -----------  -------------
@@ -197,10 +181,28 @@ def print_ip_table(
     """
 
     addresses = {"Reachable": active_ip_list, "Unreachable": passive_ip_list}
-    print(tabulate(addresses, headers="keys"))
+    print("\n" + tabulate(addresses, headers="keys"))
+
+
+def arg_parse():
+    """Output of the help command"""
+
+    arg = ArgumentParser(description="Ping the list of ip addresses")
+    arg.add_argument(
+        "ip_address",
+        type=list,
+        help="""The IP address in the format:
+        192.168.0.1,
+        192.168.0.1-10,
+        192.168.0.1-192.168.0.10,
+        192.168.0.0\\16,
+        when using a mask, specify the network address""",
+    )
+    if arg.parse_args():
+        ranges = convert_ranges_to_ip_list(argv[1::])
+        reachable, unreachable = ping_ip_addresses(ranges)
+        print_ip_table(reachable, unreachable)
 
 
 if __name__ == "__main__":
-    ranges = convert_ranges_to_ip_list(argv[1::])
-    reachable, unreachable = ping_ip_addresses(ranges)
-    print_ip_table(reachable, unreachable)
+    arg_parse()
