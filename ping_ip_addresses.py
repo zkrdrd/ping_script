@@ -8,14 +8,19 @@ from platform import system
 from re import search
 from subprocess import PIPE, run
 from sys import argv
-from typing import List, Tuple, Union
+from typing import List, Union
 
 from tabulate import tabulate
 
-operation_system = system()
+
+class ExceptionProcessing(Exception):
+    """Class custom exception processing"""
+
+    def __init__(self, *args):
+        super().__init__(*args)
 
 
-def ping_ip_addresses(ip_addresses: List[str]) -> Tuple[List[str]]:
+def ping_ip_addresses(ip_addresses: List[str]) -> List[str] | List[str]:
     """Running the ping command.
 
     Searching for a string using a regular expression
@@ -51,10 +56,12 @@ def ping_ip_addresses(ip_addresses: List[str]) -> Tuple[List[str]]:
     """
 
     if ip_addresses is None:
-        exit("List is empty")
+        raise ExceptionProcessing("List is empty")
 
     active_ip_list = []
     passive_ip_list = []
+
+    operation_system = system()
 
     for ip in ip_addresses:
         print(f"Check: {ip}")
@@ -75,7 +82,7 @@ def ping_ip_addresses(ip_addresses: List[str]) -> Tuple[List[str]]:
                 )
 
             case _:
-                exit("Undefined system")
+                raise ExceptionProcessing("Undefined system")
 
         if search(r"\s(TTL|ttl)", str(reply)):
             active_ip_list.append(ip)
@@ -94,7 +101,7 @@ def convert_ranges_to_ip_list(ip: Union[str, list]) -> List[str]:
         The parameter is accepted as a string, for example
             1. '192.168.0.1'
             2. '192.168.0.1-4'
-            3. '192.168.0.1-192.168.0.1-4'
+            3. '192.168.0.1-192.168.0.4'
             4. '192.168.0.0/16'
 
         or as a list
@@ -111,40 +118,60 @@ def convert_ranges_to_ip_list(ip: Union[str, list]) -> List[str]:
             ]
     """
 
-    if ip is None or ip == "":
-        exit("argument is empty")
+    def calculate_ip_append_to_list(ip, ip_range_list):
+        """Calculates and fills in the list
+
+        Args:
+            1. '192.168.0.1-2' or ['192.168.0.1-2',...]
+            2. list
+
+        Do:
+            Calculate range IP addresses and append
+            ['192.168.0.1', '192.168.0.2']
+        """
+
+        if search(r"\d\/", ip):
+
+            subnet = ip_network(ip)
+
+            for ips in subnet.hosts():
+                ip_range_list.append(str(IPv4Address(getattr(ips, "_ip"))))
+        else:
+            if search(r"\d\-", ip):
+                splitted_ip = ip.split("-")
+                arg1 = ip_address(splitted_ip[0])
+                if len(splitted_ip) == 1:
+                    ip_range_list.append(str(arg1))
+
+                if splitted_ip[1].isdigit():
+                    arg2 = splitted_ip[1]
+                    for i in range(
+                        int(arg1),
+                        int(arg1) + int(arg2),
+                        1,
+                    ):
+                        ip_range_list.append(str(IPv4Address(i)))
+                else:
+                    arg2 = ip_address(splitted_ip[1])
+                    for i in range(int(arg1), int(arg2) + 1, 1):
+                        ip_range_list.append(str(IPv4Address(i)))
+            else:
+                ip_range_list.append(ip)
+
+    if ip is None or not ip:
+        raise ExceptionProcessing("argument is empty")
 
     ip_range_list = []
 
     try:
-        for sub in ip:
-            try:
-                subnet = ip_network(sub)
-            except ValueError as ve:
-                raise ValueError from ve
+        if isinstance(ip, list):
+            for sub in ip:
+                calculate_ip_append_to_list(sub, ip_range_list)
+        if isinstance(ip, str):
+            calculate_ip_append_to_list(ip, ip_range_list)
 
-            if subnet.prefixlen == 31 or subnet.prefixlen == 32:
-                raise ValueError
-
-            for ips in subnet.hosts():
-                ip_range_list.append(str(IPv4Address(getattr(ips, "_ip"))))
-
-    except ValueError:
-        for list_arg in ip:
-            splitted_ip = list_arg.split("-")
-            arg1 = ip_address(splitted_ip[0])
-            if len(splitted_ip) == 1:
-                ip_range_list.append(str(arg1))
-            else:
-                try:
-                    arg2 = ip_address(splitted_ip[1])
-                    for i in range(int(arg1), int(arg2) + 1, 1):
-                        ip_range_list.append(str(IPv4Address(i)))
-
-                except ValueError:
-                    arg2 = splitted_ip[1]
-                    for i in range(int(arg1), int(arg1) + int(arg2), 1):
-                        ip_range_list.append(str(IPv4Address(i)))
+    except ValueError as err:
+        raise err
 
     return ip_range_list
 
@@ -184,7 +211,7 @@ def print_ip_table(
     print("\n" + tabulate(addresses, headers="keys"))
 
 
-def arg_parse():
+def arg_parse() -> ArgumentParser:
     """Output of the help command"""
 
     arg = ArgumentParser(description="Ping the list of ip addresses")
@@ -198,11 +225,22 @@ def arg_parse():
         192.168.0.0\\16,
         when using a mask, specify the network address""",
     )
-    if arg.parse_args():
-        ranges = convert_ranges_to_ip_list(argv[1::])
-        reachable, unreachable = ping_ip_addresses(ranges)
-        print_ip_table(reachable, unreachable)
+    return arg
+
+
+def main():
+    """Main function"""
+    try:
+        if arg_parse().parse_args():
+            ranges = convert_ranges_to_ip_list(argv[1::])
+            reachable, unreachable = ping_ip_addresses(ranges)
+            print_ip_table(reachable, unreachable)
+
+    except ExceptionProcessing as err:
+        raise err
+    except ValueError as err:
+        raise err
 
 
 if __name__ == "__main__":
-    arg_parse()
+    main()
