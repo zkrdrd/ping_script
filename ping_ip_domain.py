@@ -2,7 +2,7 @@
 Модуль, проверки доступности узлов при помощи команды ping.
 """
 
-from argparse import ArgumentParser
+from argparse import REMAINDER, ArgumentParser
 from ipaddress import IPv4Address, ip_address, ip_network
 from platform import system
 from re import search
@@ -92,7 +92,7 @@ def ping_ip_addresses(ip_addresses: List[str]) -> List[str] | List[str]:
     return active_ip_list, passive_ip_list
 
 
-def convert_ranges_to_ip_list(ip: Union[str, list]) -> List[str]:
+def convert_ranges_to_ip_list(ip: Union[str, List[str]]) -> List[str]:
     """Converts a list of IP addresses in various formats to a list of,
     where each IP address is specified separately.
 
@@ -118,7 +118,7 @@ def convert_ranges_to_ip_list(ip: Union[str, list]) -> List[str]:
             ]
     """
 
-    def calculate_ip_append_to_list(ip, ip_range_list):
+    def calculate_ip_append_to_list(ip: str, ip_range_list: List[str]) -> None:
         """Calculates and fills in the list
 
         Args:
@@ -163,15 +163,11 @@ def convert_ranges_to_ip_list(ip: Union[str, list]) -> List[str]:
 
     ip_range_list = []
 
-    try:
-        if isinstance(ip, list):
-            for sub in ip:
-                calculate_ip_append_to_list(sub, ip_range_list)
-        if isinstance(ip, str):
-            calculate_ip_append_to_list(ip, ip_range_list)
-
-    except ValueError as err:
-        raise err
+    if isinstance(ip, list):
+        for sub in ip:
+            calculate_ip_append_to_list(sub, ip_range_list)
+    if isinstance(ip, str):
+        calculate_ip_append_to_list(ip, ip_range_list)
 
     return ip_range_list
 
@@ -224,22 +220,17 @@ def arg_parse() -> ArgumentParser:
         192.168.0.1-192.168.0.10,
         192.168.0.0\\16,
         when using a mask, specify the network address""",
+        nargs=REMAINDER,
     )
     return arg
 
 
 def main():
     """Main function"""
-    try:
-        if arg_parse().parse_args():
-            ranges = convert_ranges_to_ip_list(argv[1::])
-            reachable, unreachable = ping_ip_addresses(ranges)
-            print_ip_table(reachable, unreachable)
-
-    except ExceptionProcessing as err:
-        raise err
-    except ValueError as err:
-        raise err
+    if arg_parse().parse_args():
+        ranges = convert_ranges_to_ip_list(argv[1::])
+        reachable, unreachable = ping_ip_addresses(ranges)
+        print_ip_table(reachable, unreachable)
 
 
 if __name__ == "__main__":

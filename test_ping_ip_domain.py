@@ -2,7 +2,7 @@
 Тестирование модуля ping_ip_address
 """
 
-from ping_ip_addresses import convert_ranges_to_ip_list, ping_ip_addresses
+from ping_ip_domain import convert_ranges_to_ip_list, ping_ip_addresses
 
 
 def test_ping_ip_addresses():
@@ -25,6 +25,29 @@ def test_ping_ip_addresses():
     ) == (
         ["8.8.8.8", "127.0.0.1"],
         ["192.168.0.6"],
+    )
+
+
+def test_ping_domain_name():
+    """Проверка функции пинга
+
+    Args:
+        ["google.com", "ya.ru", "NotAdomain"]
+
+    Result:
+        ["google.com", "ya.ru"]
+        ["NotAdomain"]
+    """
+
+    assert ping_ip_addresses(
+        [
+            "google.com",
+            "ya.ru",
+            "NotAdomain",
+        ]
+    ) == (
+        ["google.com", "ya.ru"],
+        ["NotAdomain"],
     )
 
 
